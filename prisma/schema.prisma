@@ -1,0 +1,86 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Model for Authentication
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String   // Will be hashed
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// Charging Station Model
+model Station {
+  id            String        @id @default(cuid())
+  name          String
+  location      String
+  power         String        // e.g., "22 kW", "50 kW"
+  connectorType String        // e.g., "Type 2", "CCS"
+  status        StationStatus @default(ACTIVE)
+  latitude      Float?
+  longitude     Float?
+  uptime        Float         @default(100.0) // Percentage
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  sessions Session[]
+
+  @@map("stations")
+}
+
+enum StationStatus {
+  ACTIVE
+  OFFLINE
+  MAINTENANCE
+}
+
+// Charging Session Model
+model Session {
+  id           String        @id @default(cuid())
+  sessionId    String        @unique // e.g., "S-001"
+  stationId    String
+  userId       String
+  startTime    DateTime
+  endTime      DateTime?
+  duration     Int?          // in minutes
+  energyKwh    Float         @default(0.0)
+  cost         Float         @default(0.0) // in Rands
+  status       SessionStatus @default(CHARGING)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  station Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([stationId])
+  @@index([userId])
+  @@index([status])
+  @@map("sessions")
+}
+
+enum SessionStatus {
+  CHARGING
+  COMPLETED
+  FAILED
+}
