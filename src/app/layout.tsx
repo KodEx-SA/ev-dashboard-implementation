@@ -197,7 +197,7 @@ export default function RootLayout({
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`text-sm font-medium transition-colors ${
+                      className={`text-m font-medium transition-colors ${
                         isActive(item.href)
                           ? "text-emerald-400"
                           : "text-slate-400 hover:text-white"
