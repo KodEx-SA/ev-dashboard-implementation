@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Zap, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -33,8 +36,8 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect to dashboard on success
-      router.push("/");
+      // Redirect to callback URL or dashboard on success
+      router.push(callbackUrl);
       router.refresh();
     } catch (error) {
       setError("Something went wrong. Please try again.");
