@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   LineChart,
   Line,
@@ -24,7 +26,8 @@ import {
   MapPin,
   Activity,
   Clock,
-  Banknote,
+  Loader2,
+  XCircle,
 } from "lucide-react";
 
 // Custom Rand Sign Component
@@ -77,60 +80,34 @@ const StatCard: React.FC<StatCardProps> = ({
 );
 
 export default function DashboardPage() {
-  const sessionData = [
-    { day: "Mon", sessions: 12, energy: 45 },
-    { day: "Tue", sessions: 18, energy: 68 },
-    { day: "Wed", sessions: 9, energy: 32 },
-    { day: "Thu", sessions: 15, energy: 55 },
-    { day: "Fri", sessions: 22, energy: 82 },
-    { day: "Sat", sessions: 28, energy: 95 },
-    { day: "Sun", sessions: 25, energy: 88 },
-  ];
+  const { data: session } = useSession();
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const energyData = [
-    { station: "Station A", kwh: 120, efficiency: 94 },
-    { station: "Station B", kwh: 80, efficiency: 88 },
-    { station: "Station C", kwh: 150, efficiency: 96 },
-    { station: "Station D", kwh: 60, efficiency: 85 },
-    { station: "Station E", kwh: 95, efficiency: 91 },
-  ];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await fetch("/api/dashboard");
 
-  const statusData = [
-    { name: "Active", value: 12, color: "#10b981" },
-    { name: "Idle", value: 3, color: "#64748b" },
-    { name: "Maintenance", value: 2, color: "#f59e0b" },
-  ];
+        if (!response.ok) {
+          throw new Error("Failed to fetch dashboard data");
+        }
 
-  const recentActivity = [
-    {
-      id: 1,
-      station: "Station A",
-      user: "User #1234",
-      time: "5 min ago",
-      status: "completed",
-    },
-    {
-      id: 2,
-      station: "Station C",
-      user: "User #5678",
-      time: "12 min ago",
-      status: "active",
-    },
-    {
-      id: 3,
-      station: "Station B",
-      user: "User #9012",
-      time: "23 min ago",
-      status: "completed",
-    },
-    {
-      id: 4,
-      station: "Station D",
-      user: "User #3456",
-      time: "35 min ago",
-      status: "completed",
-    },
-  ];
+        const data = await response.json();
+        setDashboardData(data);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError("Failed to load dashboard data. Please try again.");
+        setLoading(false);
+      }
+    };
+
+    if (session) {
+      fetchDashboardData();
+    }
+  }, [session]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -147,6 +124,40 @@ export default function DashboardPage() {
     }
     return null;
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 lg:p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-emerald-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 lg:p-8">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
+          <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Error Loading Dashboard
+          </h3>
+          <p className="text-red-400">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { stats, statusData, energyByStation, sessionData, recentActivity } =
+    dashboardData;
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
@@ -174,7 +185,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Sessions"
-          value="129"
+          value={stats.totalSessions.toString()}
           change="+12%"
           isPositive={true}
           icon={Activity}
@@ -182,7 +193,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Active Stations"
-          value="12/17"
+          value={`${stats.activeStations}/${stats.totalStations}`}
           change="+2"
           isPositive={true}
           icon={MapPin}
@@ -190,7 +201,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Energy Delivered"
-          value="505 kWh"
+          value={`${Math.round(stats.energyDelivered)} kWh`}
           change="+18%"
           isPositive={true}
           icon={Battery}
@@ -198,10 +209,10 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Revenue"
-          value="R1,245"
+          value={`R${Math.round(stats.revenue).toLocaleString()}`}
           change="+8%"
           isPositive={true}
-          icon={Banknote}
+          icon={RandSign}
           colorClass="bg-gradient-to-br from-blue-500 to-blue-600"
         />
       </div>
@@ -283,7 +294,7 @@ export default function DashboardPage() {
                 paddingAngle={5}
                 dataKey="value"
               >
-                {statusData.map((entry, index) => (
+                {statusData.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -291,7 +302,7 @@ export default function DashboardPage() {
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-3 mt-4">
-            {statusData.map((item) => (
+            {statusData.map((item: any) => (
               <div
                 key={item.name}
                 className="flex items-center justify-between"
@@ -321,12 +332,12 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-white mb-1">
                 Energy Delivered by Station
               </h2>
-              <p className="text-sm text-slate-400">Total kWh this week</p>
+              <p className="text-sm text-slate-400">Total kWh</p>
             </div>
             <Zap className="w-5 h-5 text-emerald-400" />
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={energyData}>
+            <BarChart data={energyByStation}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis dataKey="station" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
@@ -345,14 +356,14 @@ export default function DashboardPage() {
             <Clock className="w-5 h-5 text-slate-400" />
           </div>
           <div className="space-y-4">
-            {recentActivity.map((activity) => (
+            {recentActivity.map((activity: any) => (
               <div
                 key={activity.id}
                 className="flex items-start gap-3 pb-4 border-b border-slate-800/50 last:border-0 last:pb-0"
               >
                 <div
                   className={`w-2 h-2 mt-2 rounded-full ${
-                    activity.status === "active"
+                    activity.status === "charging"
                       ? "bg-emerald-400 animate-pulse"
                       : "bg-slate-600"
                   }`}
@@ -368,7 +379,7 @@ export default function DashboardPage() {
                 </div>
                 <span
                   className={`text-xs px-2 py-1 rounded-full ${
-                    activity.status === "active"
+                    activity.status === "charging"
                       ? "bg-emerald-500/20 text-emerald-400"
                       : "bg-slate-700/50 text-slate-400"
                   }`}

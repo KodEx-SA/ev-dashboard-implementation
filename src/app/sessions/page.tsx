@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   Activity,
   Search,
@@ -16,119 +17,70 @@ import {
   XCircle,
   TrendingUp,
   User,
+  Loader2,
 } from "lucide-react";
 
-interface Session {
+interface SessionData {
   id: string;
-  station: string;
-  user: string;
-  start: string;
-  end: string;
-  duration: string;
-  energy: string;
-  cost: string;
-  status: "Completed" | "Charging" | "Failed";
-  date: string;
+  sessionId: string;
+  startTime: string;
+  endTime: string | null;
+  duration: number | null;
+  energyKwh: number;
+  cost: number;
+  status: "CHARGING" | "COMPLETED" | "FAILED";
+  station: {
+    id: string;
+    name: string;
+    location: string;
+  };
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
 }
 
 export default function SessionsPage() {
+  const { data: session } = useSession();
+  const [sessions, setSessions] = useState<SessionData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const sessions: Session[] = [
-    {
-      id: "S-001",
-      station: "Station A",
-      user: "User #1234",
-      start: "12:05",
-      end: "12:45",
-      duration: "40 min",
-      energy: "12 kWh",
-      cost: "R 84.00",
-      status: "Completed",
-      date: "2024-11-16",
-    },
-    {
-      id: "S-002",
-      station: "Station B",
-      user: "User #5678",
-      start: "13:15",
-      end: "—",
-      duration: "—",
-      energy: "4 kWh",
-      cost: "R 28.00",
-      status: "Charging",
-      date: "2024-11-16",
-    },
-    {
-      id: "S-003",
-      station: "Station C",
-      user: "User #9012",
-      start: "10:20",
-      end: "10:50",
-      duration: "30 min",
-      energy: "7 kWh",
-      cost: "R 49.00",
-      status: "Completed",
-      date: "2024-11-16",
-    },
-    {
-      id: "S-004",
-      station: "Station A",
-      user: "User #3456",
-      start: "09:15",
-      end: "10:05",
-      duration: "50 min",
-      energy: "15 kWh",
-      cost: "R 105.00",
-      status: "Completed",
-      date: "2024-11-16",
-    },
-    {
-      id: "S-005",
-      station: "Station D",
-      user: "User #7890",
-      start: "11:30",
-      end: "11:35",
-      duration: "5 min",
-      energy: "0 kWh",
-      cost: "R 0.00",
-      status: "Failed",
-      date: "2024-11-16",
-    },
-    {
-      id: "S-006",
-      station: "Station C",
-      user: "User #2345",
-      start: "08:00",
-      end: "09:15",
-      duration: "75 min",
-      energy: "22 kWh",
-      cost: "R 154.00",
-      status: "Completed",
-      date: "2024-11-15",
-    },
-    {
-      id: "S-007",
-      station: "Station E",
-      user: "User #6789",
-      start: "14:20",
-      end: "15:30",
-      duration: "70 min",
-      energy: "18 kWh",
-      cost: "R 126.00",
-      status: "Completed",
-      date: "2024-11-15",
-    },
-  ];
+  // Fetch sessions from API
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const response = await fetch("/api/sessions");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch sessions");
+        }
+
+        const data = await response.json();
+        setSessions(data.sessions);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching sessions:", err);
+        setError("Failed to load sessions. Please try again.");
+        setLoading(false);
+      }
+    };
+
+    if (session) {
+      fetchSessions();
+    }
+  }, [session]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Completed":
+      case "COMPLETED":
         return <CheckCircle className="w-4 h-4" />;
-      case "Charging":
+      case "CHARGING":
         return <AlertCircle className="w-4 h-4 animate-pulse" />;
-      case "Failed":
+      case "FAILED":
         return <XCircle className="w-4 h-4" />;
       default:
         return null;
@@ -137,22 +89,35 @@ export default function SessionsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Completed":
+      case "COMPLETED":
         return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-      case "Charging":
+      case "CHARGING":
         return "bg-cyan-500/20 text-cyan-400 border-cyan-500/30";
-      case "Failed":
+      case "FAILED":
         return "bg-red-500/20 text-red-400 border-red-500/30";
       default:
         return "bg-slate-500/20 text-slate-400 border-slate-500/30";
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-ZA");
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-ZA", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const filteredSessions = sessions.filter((session) => {
     const matchesSearch =
-      session.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.station.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      session.user.toLowerCase().includes(searchTerm.toLowerCase());
+      session.sessionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.station.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === "all" ||
       session.status.toLowerCase() === statusFilter.toLowerCase();
@@ -161,16 +126,43 @@ export default function SessionsPage() {
 
   const stats = {
     total: sessions.length,
-    completed: sessions.filter((s) => s.status === "Completed").length,
-    charging: sessions.filter((s) => s.status === "Charging").length,
-    failed: sessions.filter((s) => s.status === "Failed").length,
-    totalEnergy: sessions
-      .reduce((sum, s) => sum + parseFloat(s.energy.replace(" kWh", "")), 0)
-      .toFixed(1),
-    totalRevenue: sessions
-      .reduce((sum, s) => sum + parseFloat(s.cost.replace("R ", "")), 0)
-      .toFixed(2),
+    completed: sessions.filter((s) => s.status === "COMPLETED").length,
+    charging: sessions.filter((s) => s.status === "CHARGING").length,
+    failed: sessions.filter((s) => s.status === "FAILED").length,
+    totalEnergy: sessions.reduce((sum, s) => sum + s.energyKwh, 0).toFixed(1),
+    totalRevenue: sessions.reduce((sum, s) => sum + s.cost, 0).toFixed(2),
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 lg:p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-emerald-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading sessions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 lg:p-8">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
+          <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Error Loading Sessions
+          </h3>
+          <p className="text-red-400">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
@@ -315,49 +307,56 @@ export default function SessionsPage() {
                 >
                   <td className="p-4">
                     <span className="font-mono text-sm text-white">
-                      {session.id}
+                      {session.sessionId}
                     </span>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-emerald-400" />
-                      <span className="text-white">{session.station}</span>
+                      <span className="text-white">{session.station.name}</span>
                     </div>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-cyan-400" />
-                      <span className="text-slate-300">{session.user}</span>
+                      <span className="text-slate-300">
+                        {session.user.name || session.user.email}
+                      </span>
                     </div>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-300">{session.date}</span>
+                      <span className="text-slate-300">
+                        {formatDate(session.startTime)}
+                      </span>
                     </div>
                   </td>
                   <td className="p-4">
                     <span className="text-slate-300">
-                      {session.start} - {session.end}
+                      {formatTime(session.startTime)} -{" "}
+                      {session.endTime ? formatTime(session.endTime) : "—"}
                     </span>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-300">{session.duration}</span>
+                      <span className="text-slate-300">
+                        {session.duration ? `${session.duration} min` : "—"}
+                      </span>
                     </div>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <Zap className="w-4 h-4 text-teal-400" />
                       <span className="text-white font-semibold">
-                        {session.energy}
+                        {session.energyKwh.toFixed(1)} kWh
                       </span>
                     </div>
                   </td>
                   <td className="p-4">
                     <span className="text-emerald-400 font-semibold">
-                      {session.cost}
+                      R {session.cost.toFixed(2)}
                     </span>
                   </td>
                   <td className="p-4">
@@ -387,10 +386,10 @@ export default function SessionsPage() {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <span className="font-mono text-sm text-emerald-400 font-semibold">
-                  {session.id}
+                  {session.sessionId}
                 </span>
                 <p className="text-white font-semibold mt-1">
-                  {session.station}
+                  {session.station.name}
                 </p>
               </div>
               <span
@@ -406,31 +405,38 @@ export default function SessionsPage() {
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-slate-400 mb-1">User</p>
-                <p className="text-white">{session.user}</p>
+                <p className="text-white">
+                  {session.user.name || session.user.email}
+                </p>
               </div>
               <div>
                 <p className="text-slate-400 mb-1">Date</p>
-                <p className="text-white">{session.date}</p>
+                <p className="text-white">{formatDate(session.startTime)}</p>
               </div>
               <div>
                 <p className="text-slate-400 mb-1">Time</p>
                 <p className="text-white">
-                  {session.start} - {session.end}
+                  {formatTime(session.startTime)} -{" "}
+                  {session.endTime ? formatTime(session.endTime) : "—"}
                 </p>
               </div>
               <div>
                 <p className="text-slate-400 mb-1">Duration</p>
-                <p className="text-white">{session.duration}</p>
+                <p className="text-white">
+                  {session.duration ? `${session.duration} min` : "—"}
+                </p>
               </div>
               <div>
                 <p className="text-slate-400 mb-1">Energy</p>
                 <p className="text-emerald-400 font-semibold">
-                  {session.energy}
+                  {session.energyKwh.toFixed(1)} kWh
                 </p>
               </div>
               <div>
                 <p className="text-slate-400 mb-1">Cost</p>
-                <p className="text-emerald-400 font-semibold">{session.cost}</p>
+                <p className="text-emerald-400 font-semibold">
+                  R {session.cost.toFixed(2)}
+                </p>
               </div>
             </div>
           </div>
