@@ -1,0 +1,144 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+// GET single session by ID
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await auth();
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const chargingSession = await prisma.session.findUnique({
+      where: {
+        id: params.id,
+      },
+      include: {
+        station: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!chargingSession) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ session: chargingSession }, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching session:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch session" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT update session
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await auth();
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { endTime, duration, energyKwh, cost, status: sessionStatus } = body;
+
+    // Check if session exists
+    const existingSession = await prisma.session.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!existingSession) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+
+    // Update session
+    const updatedSession = await prisma.session.update({
+      where: {
+        id: params.id,
+      },
+      data: {
+        ...(endTime && { endTime: new Date(endTime) }),
+        ...(duration !== undefined && { duration: parseInt(duration) }),
+        ...(energyKwh !== undefined && { energyKwh: parseFloat(energyKwh) }),
+        ...(cost !== undefined && { cost: parseFloat(cost) }),
+        ...(sessionStatus && { status: sessionStatus }),
+      },
+      include: {
+        station: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ session: updatedSession }, { status: 200 });
+  } catch (error) {
+    console.error("Error updating session:", error);
+    return NextResponse.json(
+      { error: "Failed to update session" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE session
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await auth();
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if session exists
+    const existingSession = await prisma.session.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!existingSession) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+
+    // Delete session
+    await prisma.session.delete({
+      where: {
+        id: params.id,
+      },
+    });
+
+    return NextResponse.json(
+      { message: "Session deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting session:", error);
+    return NextResponse.json(
+      { error: "Failed to delete session" },
+      { status: 500 }
+    );
+  }
+}

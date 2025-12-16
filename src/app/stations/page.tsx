@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   MapPin,
   Zap,
@@ -14,100 +15,64 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 interface Station {
-  id: number;
+  id: string;
   name: string;
-  status: "Active" | "Offline" | "Maintenance";
+  status: "ACTIVE" | "OFFLINE" | "MAINTENANCE";
   power: string;
   location: string;
   connectorType: string;
-  sessionsToday: number;
-  energyDelivered: number;
-  uptime: string;
+  uptime: number;
+  latitude?: number;
+  longitude?: number;
+  _count: {
+    sessions: number;
+  };
 }
 
 export default function StationsPage() {
+  const { data: session } = useSession();
+  const [stations, setStations] = useState<Station[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const stations: Station[] = [
-    {
-      id: 1,
-      name: "Station A",
-      status: "Active",
-      power: "22 kW",
-      location: "Sandton",
-      connectorType: "Type 2",
-      sessionsToday: 8,
-      energyDelivered: 145,
-      uptime: "99.2%",
-    },
-    {
-      id: 2,
-      name: "Station B",
-      status: "Offline",
-      power: "7 kW",
-      location: "Rosebank",
-      connectorType: "Type 2",
-      sessionsToday: 0,
-      energyDelivered: 0,
-      uptime: "0%",
-    },
-    {
-      id: 3,
-      name: "Station C",
-      status: "Active",
-      power: "50 kW",
-      location: "Pretoria",
-      connectorType: "CCS",
-      sessionsToday: 12,
-      energyDelivered: 280,
-      uptime: "98.5%",
-    },
-    {
-      id: 4,
-      name: "Station D",
-      status: "Active",
-      power: "22 kW",
-      location: "Johannesburg CBD",
-      connectorType: "Type 2",
-      sessionsToday: 6,
-      energyDelivered: 98,
-      uptime: "97.8%",
-    },
-    {
-      id: 5,
-      name: "Station E",
-      status: "Maintenance",
-      power: "50 kW",
-      location: "Midrand",
-      connectorType: "CCS",
-      sessionsToday: 0,
-      energyDelivered: 0,
-      uptime: "0%",
-    },
-    {
-      id: 6,
-      name: "Station F",
-      status: "Active",
-      power: "7 kW",
-      location: "Centurion",
-      connectorType: "Type 2",
-      sessionsToday: 4,
-      energyDelivered: 52,
-      uptime: "96.3%",
-    },
-  ];
+  // Fetch stations from API
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const response = await fetch("/api/stations");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch stations");
+        }
+
+        const data = await response.json();
+        setStations(data.stations);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching stations:", err);
+        setError("Failed to load stations. Please try again.");
+        setLoading(false);
+      }
+    };
+
+    if (session) {
+      fetchStations();
+    }
+  }, [session]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Active":
+      case "ACTIVE":
         return <CheckCircle className="w-5 h-5 text-emerald-400" />;
-      case "Offline":
+      case "OFFLINE":
         return <XCircle className="w-5 h-5 text-red-400" />;
-      case "Maintenance":
+      case "MAINTENANCE":
         return <AlertCircle className="w-5 h-5 text-amber-400" />;
       default:
         return null;
@@ -116,11 +81,11 @@ export default function StationsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Active":
+      case "ACTIVE":
         return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-      case "Offline":
+      case "OFFLINE":
         return "bg-red-500/20 text-red-400 border-red-500/30";
-      case "Maintenance":
+      case "MAINTENANCE":
         return "bg-amber-500/20 text-amber-400 border-amber-500/30";
       default:
         return "bg-slate-500/20 text-slate-400 border-slate-500/30";
@@ -139,10 +104,41 @@ export default function StationsPage() {
 
   const stats = {
     total: stations.length,
-    active: stations.filter((s) => s.status === "Active").length,
-    offline: stations.filter((s) => s.status === "Offline").length,
-    maintenance: stations.filter((s) => s.status === "Maintenance").length,
+    active: stations.filter((s) => s.status === "ACTIVE").length,
+    offline: stations.filter((s) => s.status === "OFFLINE").length,
+    maintenance: stations.filter((s) => s.status === "MAINTENANCE").length,
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 lg:p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-emerald-400 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading stations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 lg:p-8">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
+          <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Error Loading Stations
+          </h3>
+          <p className="text-red-400">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
@@ -282,41 +278,18 @@ export default function StationsPage() {
                 </p>
               </div>
               <div>
-                <p className="text-slate-400 text-xs mb-1">Sessions Today</p>
+                <p className="text-slate-400 text-xs mb-1">Total Sessions</p>
                 <p className="text-white font-semibold flex items-center gap-1">
                   <TrendingUp className="w-4 h-4 text-cyan-400" />
-                  {station.sessionsToday}
+                  {station._count.sessions}
                 </p>
               </div>
               <div>
                 <p className="text-slate-400 text-xs mb-1">Uptime</p>
                 <p className="text-white font-semibold flex items-center gap-1">
                   <Clock className="w-4 h-4 text-teal-400" />
-                  {station.uptime}
+                  {station.uptime}%
                 </p>
-              </div>
-            </div>
-
-            {/* Energy Delivered */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-400 text-sm">
-                  Energy Delivered Today
-                </span>
-                <span className="text-emerald-400 font-bold">
-                  {station.energyDelivered} kWh
-                </span>
-              </div>
-              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(
-                      (station.energyDelivered / 300) * 100,
-                      100
-                    )}%`,
-                  }}
-                ></div>
               </div>
             </div>
 
