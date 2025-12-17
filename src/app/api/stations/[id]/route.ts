@@ -5,18 +5,23 @@ import { auth } from "@/lib/auth";
 // GET single station by ID
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
+
+    const { id } = await params; // Await params
 
     const station = await prisma.station.findUnique({
       where: {
-        id: params.id,
+        id: id,
       },
       include: {
         sessions: {
@@ -34,7 +39,10 @@ export async function GET(
     });
 
     if (!station) {
-      return NextResponse.json({ error: "Station not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Station not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ station }, { status: 200 });
@@ -50,15 +58,19 @@ export async function GET(
 // PUT update station
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
+    const { id } = await params; // Await params
     const body = await request.json();
     const {
       name,
@@ -73,17 +85,20 @@ export async function PUT(
 
     // Check if station exists
     const existingStation = await prisma.station.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!existingStation) {
-      return NextResponse.json({ error: "Station not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Station not found" },
+        { status: 404 }
+      );
     }
 
     // Update station
     const station = await prisma.station.update({
       where: {
-        id: params.id,
+        id: id,
       },
       data: {
         ...(name && { name }),
@@ -110,28 +125,36 @@ export async function PUT(
 // DELETE station
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
+
+    const { id } = await params; // Await params
 
     // Check if station exists
     const existingStation = await prisma.station.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!existingStation) {
-      return NextResponse.json({ error: "Station not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Station not found" },
+        { status: 404 }
+      );
     }
 
     // Delete station (cascade will delete related sessions)
     await prisma.station.delete({
       where: {
-        id: params.id,
+        id: id,
       },
     });
 

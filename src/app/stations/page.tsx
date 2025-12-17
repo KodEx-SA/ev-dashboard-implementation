@@ -16,7 +16,12 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
+  Edit,
+  Trash2,
+  Eye,
 } from "lucide-react";
+import StationFormModal from "@/components/StationFormModal";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 interface Station {
   id: string;
@@ -41,30 +46,73 @@ export default function StationsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  // Modal states
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
+  const [successMessage, setSuccessMessage] = useState("");
+
   // Fetch stations from API
-  useEffect(() => {
-    const fetchStations = async () => {
-      try {
-        const response = await fetch("/api/stations");
+  const fetchStations = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/stations");
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch stations");
-        }
-
-        const data = await response.json();
-        setStations(data.stations);
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching stations:", err);
-        setError("Failed to load stations. Please try again.");
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error("Failed to fetch stations");
       }
-    };
 
+      const data = await response.json();
+      setStations(data.stations);
+      setError("");
+    } catch (err) {
+      console.error("Error fetching stations:", err);
+      setError("Failed to load stations. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (session) {
       fetchStations();
     }
   }, [session]);
+
+  // Show success message temporarily
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(""), 3000);
+  };
+
+  // Handle delete
+  const handleDelete = async () => {
+    if (!selectedStation) return;
+
+    const response = await fetch(`/api/stations/${selectedStation.id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Failed to delete station");
+    }
+
+    await fetchStations();
+    showSuccess("Station deleted successfully!");
+    setSelectedStation(null);
+  };
+
+  // Handle create/edit success
+  const handleFormSuccess = async () => {
+    await fetchStations();
+    showSuccess(
+      isCreateModalOpen
+        ? "Station created successfully!"
+        : "Station updated successfully!"
+    );
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -130,7 +178,7 @@ export default function StationsPage() {
           </h3>
           <p className="text-red-400">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={fetchStations}
             className="mt-4 px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
           >
             Retry
@@ -142,6 +190,14 @@ export default function StationsPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+          <CheckCircle className="w-5 h-5" />
+          <span>{successMessage}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -152,7 +208,10 @@ export default function StationsPage() {
             Manage and monitor all charging stations
           </p>
         </div>
-        <button className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105 w-full lg:w-auto">
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105 w-full lg:w-auto"
+        >
           <Plus className="w-5 h-5" />
           <span>Add Station</span>
         </button>
@@ -295,12 +354,24 @@ export default function StationsPage() {
 
             {/* Actions */}
             <div className="flex gap-2">
-              <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors font-medium">
-                <Settings className="w-4 h-4" />
-                <span>Manage</span>
+              <button
+                onClick={() => {
+                  setSelectedStation(station);
+                  setIsEditModalOpen(true);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors font-medium"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Edit</span>
               </button>
-              <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors">
-                View Details
+              <button
+                onClick={() => {
+                  setSelectedStation(station);
+                  setIsDeleteModalOpen(true);
+                }}
+                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -319,6 +390,37 @@ export default function StationsPage() {
           </p>
         </div>
       )}
+
+      {/* Modals */}
+      <StationFormModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleFormSuccess}
+        mode="create"
+      />
+
+      <StationFormModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedStation(null);
+        }}
+        onSuccess={handleFormSuccess}
+        station={selectedStation}
+        mode="edit"
+      />
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedStation(null);
+        }}
+        onConfirm={handleDelete}
+        title="Delete Station"
+        message="Are you sure you want to delete this station? This will also delete all associated charging sessions."
+        itemName={selectedStation?.name || ""}
+      />
     </div>
   );
 }

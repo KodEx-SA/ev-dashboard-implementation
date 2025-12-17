@@ -100,7 +100,7 @@ export async function POST(request: Request) {
         userId: session.user.id,
         startTime: new Date(startTime),
         endTime: endTime ? new Date(endTime) : null,
-        duration: duration || null,
+        duration: duration ? parseInt(duration) : null,
         energyKwh: energyKwh ? parseFloat(energyKwh) : 0,
         cost: cost ? parseFloat(cost) : 0,
         status: status || "CHARGING",

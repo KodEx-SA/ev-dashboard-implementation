@@ -5,18 +5,23 @@ import { auth } from "@/lib/auth";
 // GET single session by ID
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
+
+    const { id } = await params; // Await params
 
     const chargingSession = await prisma.session.findUnique({
       where: {
-        id: params.id,
+        id: id,
       },
       include: {
         station: true,
@@ -31,7 +36,10 @@ export async function GET(
     });
 
     if (!chargingSession) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Session not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ session: chargingSession }, { status: 200 });
@@ -47,31 +55,44 @@ export async function GET(
 // PUT update session
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
+    const { id } = await params; // Await params
     const body = await request.json();
-    const { endTime, duration, energyKwh, cost, status: sessionStatus } = body;
+    const {
+      endTime,
+      duration,
+      energyKwh,
+      cost,
+      status: sessionStatus,
+    } = body;
 
     // Check if session exists
     const existingSession = await prisma.session.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!existingSession) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Session not found" },
+        { status: 404 }
+      );
     }
 
     // Update session
     const updatedSession = await prisma.session.update({
       where: {
-        id: params.id,
+        id: id,
       },
       data: {
         ...(endTime && { endTime: new Date(endTime) }),
@@ -105,28 +126,36 @@ export async function PUT(
 // DELETE session
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
+
+    const { id } = await params; // Await params
 
     // Check if session exists
     const existingSession = await prisma.session.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!existingSession) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Session not found" },
+        { status: 404 }
+      );
     }
 
     // Delete session
     await prisma.session.delete({
       where: {
-        id: params.id,
+        id: id,
       },
     });
 
