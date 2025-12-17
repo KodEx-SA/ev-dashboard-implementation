@@ -18,7 +18,12 @@ import {
   TrendingUp,
   User,
   Loader2,
+  Plus,
+  Edit,
+  Trash2,
 } from "lucide-react";
+import SessionFormModal from "@/components/SessionFormModal";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 interface SessionData {
   id: string;
@@ -44,35 +49,86 @@ interface SessionData {
 export default function SessionsPage() {
   const { data: session } = useSession();
   const [sessions, setSessions] = useState<SessionData[]>([]);
+  const [stations, setStations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Fetch sessions from API
+  // Modal states
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<SessionData | null>(
+    null
+  );
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // Fetch sessions and stations
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch sessions
+      const sessionsRes = await fetch("/api/sessions");
+      if (!sessionsRes.ok) throw new Error("Failed to fetch sessions");
+      const sessionsData = await sessionsRes.json();
+
+      // Fetch stations for dropdown
+      const stationsRes = await fetch("/api/stations");
+      if (!stationsRes.ok) throw new Error("Failed to fetch stations");
+      const stationsData = await stationsRes.json();
+
+      setSessions(sessionsData.sessions);
+      setStations(stationsData.stations);
+      setError("");
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Failed to load data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const response = await fetch("/api/sessions");
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch sessions");
-        }
-
-        const data = await response.json();
-        setSessions(data.sessions);
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching sessions:", err);
-        setError("Failed to load sessions. Please try again.");
-        setLoading(false);
-      }
-    };
-
     if (session) {
-      fetchSessions();
+      fetchData();
     }
   }, [session]);
+
+  // Show success message temporarily
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(""), 3000);
+  };
+
+  // Handle delete
+  const handleDelete = async () => {
+    if (!selectedSession) return;
+
+    const response = await fetch(`/api/sessions/${selectedSession.id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Failed to delete session");
+    }
+
+    await fetchData();
+    showSuccess("Session deleted successfully!");
+    setSelectedSession(null);
+  };
+
+  // Handle create/edit success
+  const handleFormSuccess = async () => {
+    await fetchData();
+    showSuccess(
+      isCreateModalOpen
+        ? "Session created successfully!"
+        : "Session updated successfully!"
+    );
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -154,7 +210,7 @@ export default function SessionsPage() {
           </h3>
           <p className="text-red-400">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={fetchData}
             className="mt-4 px-6 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
           >
             Retry
@@ -166,6 +222,14 @@ export default function SessionsPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+          <CheckCircle className="w-5 h-5" />
+          <span>{successMessage}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -176,10 +240,19 @@ export default function SessionsPage() {
             Track and manage all charging sessions
           </p>
         </div>
-        <button className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 w-full lg:w-auto">
-          <Download className="w-5 h-5" />
-          <span>Export Report</span>
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105"
+          >
+            <Plus className="w-5 h-5" />
+            <span>New Session</span>
+          </button>
+          <button className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105">
+            <Download className="w-5 h-5" />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Overview */}
@@ -297,6 +370,9 @@ export default function SessionsPage() {
                 <th className="text-left p-4 text-sm font-semibold text-slate-400">
                   Status
                 </th>
+                <th className="text-left p-4 text-sm font-semibold text-slate-400">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -369,6 +445,28 @@ export default function SessionsPage() {
                       {session.status}
                     </span>
                   </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedSession(session);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedSession(session);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -402,7 +500,7 @@ export default function SessionsPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-sm mb-4">
               <div>
                 <p className="text-slate-400 mb-1">User</p>
                 <p className="text-white">
@@ -439,6 +537,28 @@ export default function SessionsPage() {
                 </p>
               </div>
             </div>
+
+            <div className="flex gap-2 pt-4 border-t border-slate-800/50">
+              <button
+                onClick={() => {
+                  setSelectedSession(session);
+                  setIsEditModalOpen(true);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors font-medium"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedSession(session);
+                  setIsDeleteModalOpen(true);
+                }}
+                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -455,6 +575,39 @@ export default function SessionsPage() {
           </p>
         </div>
       )}
+
+      {/* Modals */}
+      <SessionFormModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleFormSuccess}
+        mode="create"
+        stations={stations}
+      />
+
+      <SessionFormModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedSession(null);
+        }}
+        onSuccess={handleFormSuccess}
+        session={selectedSession}
+        mode="edit"
+        stations={stations}
+      />
+
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedSession(null);
+        }}
+        onConfirm={handleDelete}
+        title="Delete Session"
+        message="Are you sure you want to delete this charging session? This action cannot be undone."
+        itemName={selectedSession?.sessionId || ""}
+      />
     </div>
   );
 }

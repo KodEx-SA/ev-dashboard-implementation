@@ -10,6 +10,7 @@ export const authConfig: NextAuthConfig = {
   session: {
     strategy: "jwt",
   },
+  basePath: "/api/auth",
   pages: {
     signIn: "/login",
     signOut: "/",
