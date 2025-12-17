@@ -1,23 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requireAuth, requireAdmin } from "@/lib/rbac";
 
-// GET single station by ID
+// GET single station (all authenticated users)
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
+    const { authorized, response } = await requireAuth();
+    if (!authorized) return response;
 
-    if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { id } = await params; // Await params
+    const { id } = await params;
 
     const station = await prisma.station.findUnique({
       where: {
@@ -39,10 +33,7 @@ export async function GET(
     });
 
     if (!station) {
-      return NextResponse.json(
-        { error: "Station not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Station not found" }, { status: 404 });
     }
 
     return NextResponse.json({ station }, { status: 200 });
@@ -55,22 +46,16 @@ export async function GET(
   }
 }
 
-// PUT update station
+// PUT update station (ADMIN only)
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
+    const { authorized, response } = await requireAdmin();
+    if (!authorized) return response;
 
-    if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { id } = await params; // Await params
+    const { id } = await params;
     const body = await request.json();
     const {
       name,
@@ -83,19 +68,14 @@ export async function PUT(
       uptime,
     } = body;
 
-    // Check if station exists
     const existingStation = await prisma.station.findUnique({
       where: { id: id },
     });
 
     if (!existingStation) {
-      return NextResponse.json(
-        { error: "Station not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Station not found" }, { status: 404 });
     }
 
-    // Update station
     const station = await prisma.station.update({
       where: {
         id: id,
@@ -122,36 +102,25 @@ export async function PUT(
   }
 }
 
-// DELETE station
+// DELETE station (ADMIN only)
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
+    const { authorized, response } = await requireAdmin();
+    if (!authorized) return response;
 
-    if (!session) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const { id } = await params;
 
-    const { id } = await params; // Await params
-
-    // Check if station exists
     const existingStation = await prisma.station.findUnique({
       where: { id: id },
     });
 
     if (!existingStation) {
-      return NextResponse.json(
-        { error: "Station not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Station not found" }, { status: 404 });
     }
 
-    // Delete station (cascade will delete related sessions)
     await prisma.station.delete({
       where: {
         id: id,

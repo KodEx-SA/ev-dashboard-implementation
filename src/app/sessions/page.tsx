@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { userRole } from "@/hooks/userRole";
+import ExportDropdown from "@/components/ExportDropdown";
+import { exportSessionsToCSV, exportSessionsToPDF } from "@/lib/export";
 import {
   Activity,
   Search,
   Filter,
-  Download,
   Calendar,
   Clock,
   Zap,
@@ -21,6 +23,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  Eye,
 } from "lucide-react";
 import SessionFormModal from "@/components/SessionFormModal";
 import DeleteConfirmModal from "@/components/DeleteConfirmModal";
@@ -48,6 +51,7 @@ interface SessionData {
 
 export default function SessionsPage() {
   const { data: session } = useSession();
+  const { isAdmin } = userRole();
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [stations, setStations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -241,17 +245,20 @@ export default function SessionsPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105"
-          >
-            <Plus className="w-5 h-5" />
-            <span>New Session</span>
-          </button>
-          <button className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105">
-            <Download className="w-5 h-5" />
-            <span className="hidden sm:inline">Export</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105"
+            >
+              <Plus className="w-5 h-5" />
+              <span>New Session</span>
+            </button>
+          )}
+          <ExportDropdown
+            onExportCSV={() => exportSessionsToCSV(filteredSessions)}
+            onExportPDF={() => exportSessionsToPDF(filteredSessions)}
+            label="Export"
+          />
         </div>
       </div>
 
@@ -446,26 +453,33 @@ export default function SessionsPage() {
                     </span>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedSession(session);
-                          setIsEditModalOpen(true);
-                        }}
-                        className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedSession(session);
-                          setIsDeleteModalOpen(true);
-                        }}
-                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {isAdmin ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedSession(session);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedSession(session);
+                            setIsDeleteModalOpen(true);
+                          }}
+                          className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <Eye className="w-4 h-4" />
+                        <span className="text-xs">View Only</span>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -538,27 +552,36 @@ export default function SessionsPage() {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4 border-t border-slate-800/50">
-              <button
-                onClick={() => {
-                  setSelectedSession(session);
-                  setIsEditModalOpen(true);
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors font-medium"
-              >
-                <Edit className="w-4 h-4" />
-                <span>Edit</span>
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedSession(session);
-                  setIsDeleteModalOpen(true);
-                }}
-                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+            {isAdmin ? (
+              <div className="flex gap-2 pt-4 border-t border-slate-800/50">
+                <button
+                  onClick={() => {
+                    setSelectedSession(session);
+                    setIsEditModalOpen(true);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors font-medium"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedSession(session);
+                    setIsDeleteModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2 pt-4 border-t border-slate-800/50">
+                <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-800/50 text-slate-400 rounded-lg cursor-not-allowed">
+                  <Eye className="w-4 h-4" />
+                  <span>View Only</span>
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { requireAuth, requireAdmin } from "@/lib/rbac";
 
-// GET all stations
+// GET all stations (accessible to all authenticated users)
 export async function GET() {
   try {
-    const session = await auth();
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { authorized, response } = await requireAuth();
+    if (!authorized) return response;
 
     const stations = await prisma.station.findMany({
       orderBy: {
@@ -34,14 +31,11 @@ export async function GET() {
   }
 }
 
-// POST create new station
+// POST create new station (ADMIN only)
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { authorized, response } = await requireAdmin();
+    if (!authorized) return response;
 
     const body = await request.json();
     const {

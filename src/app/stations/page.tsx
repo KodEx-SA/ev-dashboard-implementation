@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import ExportDropdown from "@/components/ExportDropdown";
+import { exportStationsToCSV, exportStationsToPDF } from "@/lib/export";
+import { userRole } from "@/hooks/userRole";
 import {
   MapPin,
   Zap,
@@ -45,6 +48,7 @@ export default function StationsPage() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { isAdmin } = userRole();
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -208,13 +212,21 @@ export default function StationsPage() {
             Manage and monitor all charging stations
           </p>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105 w-full lg:w-auto"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Station</span>
-        </button>
+        <div className="flex gap-3">
+          {isAdmin && (
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add Station</span>
+            </button>
+          )}
+          <ExportDropdown
+            onExportCSV={() => exportStationsToCSV(filteredStations)}
+            onExportPDF={() => exportStationsToPDF(filteredStations)}
+          />
+        </div>
       </div>
 
       {/* Stats Overview */}
@@ -354,25 +366,34 @@ export default function StationsPage() {
 
             {/* Actions */}
             <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setSelectedStation(station);
-                  setIsEditModalOpen(true);
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors font-medium"
-              >
-                <Edit className="w-4 h-4" />
-                <span>Edit</span>
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedStation(station);
-                  setIsDeleteModalOpen(true);
-                }}
-                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {isAdmin ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setSelectedStation(station);
+                      setIsEditModalOpen(true);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors font-medium"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedStation(station);
+                      setIsDeleteModalOpen(true);
+                    }}
+                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-800/50 text-slate-400 rounded-lg cursor-not-allowed">
+                  <Eye className="w-4 h-4" />
+                  <span>View Only</span>
+                </button>
+              )}
             </div>
           </div>
         ))}
