@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+// import { sendSessionCompletedEmail } from "@/lib/email";
 
 // GET single session by ID
 export async function GET(
@@ -112,6 +113,19 @@ export async function PUT(
         },
       },
     });
+
+    // If session is completed, send email notification to user
+    // if (sessionStatus === "completed" && updatedSession.user?.email) {
+    //   sendSessionCompletedEmail(updatedSession.user.email, {
+    //     sessionId: updatedSession.id,
+    //     stationName: updatedSession.station.name,
+    //     energyKwh: updatedSession.energyKwh,
+    //     cost: updatedSession.cost,
+    //     duration: updatedSession.duration || 0,
+    //   }).catch((error) => {
+    //     console.error("Error sending session completion email:", error);
+    //   });
+    // }
 
     return NextResponse.json({ session: updatedSession }, { status: 200 });
   } catch (error) {

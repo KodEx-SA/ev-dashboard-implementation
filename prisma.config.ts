@@ -1,8 +1,10 @@
 import { defineConfig } from "@prisma/config";
 import { config } from "dotenv";
 
-// Load .env.local for Next.js projects
-config({ path: ".env.local" });
+// local & production environments
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local';
+config({ path: envFile });
+// config({ path: ".env.production" });
 
 export default defineConfig({
   schema: "./prisma/schema.prisma",
