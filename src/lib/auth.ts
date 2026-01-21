@@ -1,20 +1,9 @@
-import NextAuth from "next-auth";
+import { getServerSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
-import type { NextAuthConfig } from "next-auth";
 
-export const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(prisma),
-  session: {
-    strategy: "jwt",
-  },
-  basePath: "/api/auth",
-  pages: {
-    signIn: "/login",
-    signOut: "/",
-  },
+export const authOptions = {
   providers: [
     Credentials({
       name: "credentials",
@@ -24,7 +13,7 @@ export const authConfig: NextAuthConfig = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
+          return null;
         }
 
         const user = await prisma.user.findUnique({
@@ -34,7 +23,7 @@ export const authConfig: NextAuthConfig = {
         });
 
         if (!user || !user.password) {
-          throw new Error("Invalid credentials");
+          return null;
         }
 
         const isPasswordValid = await bcrypt.compare(
@@ -43,7 +32,7 @@ export const authConfig: NextAuthConfig = {
         );
 
         if (!isPasswordValid) {
-          throw new Error("Invalid credentials");
+          return null;
         }
 
         return {
@@ -55,15 +44,21 @@ export const authConfig: NextAuthConfig = {
       },
     }),
   ],
+  session: {
+    strategy: "jwt" as const,
+  },
+  pages: {
+    signIn: "/login",
+  },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
@@ -73,4 +68,5 @@ export const authConfig: NextAuthConfig = {
   },
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+// For server-side session checks
+export const auth = () => getServerSession(authOptions);

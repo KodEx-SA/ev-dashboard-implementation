@@ -1,41 +1,35 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-export async function checkRole(allowedRoles: string[]) {
-    const session = await auth();
+export async function requireAuth() {
+  const session = await auth();
 
-    if (!session || !session.user) {
-        return {
-            authorized: false,
-            response: NextResponse.json(
-                { error: "Unauthorized - Please login" },
-                { status: 401 }
-            ),
-        };
-    }
-
-    const userRole = session.user.role;
-
-    if (!allowedRoles.includes(userRole)) {
-        return {
-            authorized: false,
-            response: NextResponse.json(
-                { error: "Forbidden - Insufficient permissions" },
-                { status: 403 }
-            ),
-        };
-    }
-
+  if (!session) {
     return {
-        authorized: true,
-        session,
+      authorized: false,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     };
+  }
+
+  return { authorized: true, session };
 }
 
 export async function requireAdmin() {
-    return checkRole(["ADMIN"]);
-}
+  const session = await auth();
 
-export async function requireAuth() {
-    return checkRole(["ADMIN", "USER"]);
+  if (!session) {
+    return {
+      authorized: false,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  if (session.user?.role !== "ADMIN") {
+    return {
+      authorized: false,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
+  return { authorized: true, session };
 }
