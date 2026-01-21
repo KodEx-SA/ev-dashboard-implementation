@@ -33,42 +33,42 @@ export async function GET() {
         // Calculate stats
         const stats = {
             totalSessions: sessions.length,
-            activeStations: stations.filter(s => s.status === "ACTIVE").length,
+            activeStations: stations.filter((s: { status: string; }) => s.status === "ACTIVE").length,
             totalStations: stations.length,
-            energyDelivered: sessions.reduce((sum, s) => sum + s.energyKwh, 0),
-            revenue: sessions.reduce((sum, s) => sum + s.cost, 0),
+            energyDelivered: sessions.reduce((sum: any, s: { energyKwh: any; }) => sum + s.energyKwh, 0),
+            revenue: sessions.reduce((sum: any, s: { cost: any; }) => sum + s.cost, 0),
         };
 
         // Station status distribution
         const statusData = [
             {
                 name: "Active",
-                value: stations.filter(s => s.status === "ACTIVE").length,
+                value: stations.filter((s: { status: string; }) => s.status === "ACTIVE").length,
                 color: "#10b981",
             },
             {
                 name: "Idle",
-                value: stations.filter(s => s.status === "OFFLINE").length,
+                value: stations.filter((s: { status: string; }) => s.status === "OFFLINE").length,
                 color: "#64748b",
             },
             {
                 name: "Maintenance",
-                value: stations.filter(s => s.status === "MAINTENANCE").length,
+                value: stations.filter((s: { status: string; }) => s.status === "MAINTENANCE").length,
                 color: "#f59e0b",
             },
         ];
 
         // Energy by station
-        const energyByStation = stations.map(station => {
-            const stationSessions = sessions.filter(s => s.station.name === station.name);
-            const totalEnergy = stationSessions.reduce((sum, s) => sum + s.energyKwh, 0);
+        const energyByStation = stations.map((station: { name: any; uptime: any; }) => {
+            const stationSessions = sessions.filter((s: { station: { name: any; }; }) => s.station.name === station.name);
+            const totalEnergy = stationSessions.reduce((sum: any, s: { energyKwh: any; }) => sum + s.energyKwh, 0);
 
             return {
                 station: station.name,
                 kwh: Math.round(totalEnergy),
                 efficiency: station.uptime,
             };
-        }).sort((a, b) => b.kwh - a.kwh).slice(0, 5); // Top 5 stations
+        }).sort((a: { kwh: number; }, b: { kwh: number; }) => b.kwh - a.kwh).slice(0, 5); // Top 5 stations
 
         // Sessions per day (last 7 days)
         const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -79,7 +79,7 @@ export async function GET() {
 
         const sessionData = last7Days.map(date => {
             const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
-            const daySessions = sessions.filter(s => {
+            const daySessions = sessions.filter((s: { startTime: string | number | Date; }) => {
                 const sessionDate = new Date(s.startTime);
                 return sessionDate.toDateString() === date.toDateString();
             });
@@ -87,12 +87,12 @@ export async function GET() {
             return {
                 day: dayName,
                 sessions: daySessions.length,
-                energy: Math.round(daySessions.reduce((sum, s) => sum + s.energyKwh, 0)),
+                energy: Math.round(daySessions.reduce((sum: any, s: { energyKwh: any; }) => sum + s.energyKwh, 0)),
             };
         });
 
         // Recent activity
-        const recentActivity = sessions.slice(0, 4).map(s => ({
+        const recentActivity = sessions.slice(0, 4).map((s: { id: any; station: { name: any; }; userId: string | any[]; startTime: string | number | Date; status: string; }) => ({
             id: s.id,
             station: s.station.name,
             user: `User #${s.userId.slice(-4)}`,

@@ -1,4 +1,3 @@
-import { defineConfig } from "@prisma/config";
 import { config } from "dotenv";
 
 // local & production environments
@@ -12,6 +11,10 @@ export default defineConfig({
 
 
 
+
+function defineConfig(arg0: { schema: string; }) {
+  throw new Error("Function not implemented.");
+}
 // import { defineConfig, env } from "prisma/config";
 // import "dotenv/config";
 
