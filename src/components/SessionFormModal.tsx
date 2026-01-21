@@ -166,6 +166,7 @@ export default function SessionFormModal({
           <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            title="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
@@ -212,6 +213,7 @@ export default function SessionFormModal({
                 }
                 className="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all appearance-none cursor-pointer"
                 disabled={mode === "edit"}
+                title="Select a charging station"
               >
                 <option value="">Select a station</option>
                 {stations
@@ -242,6 +244,8 @@ export default function SessionFormModal({
                   }
                   className="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   disabled={mode === "edit"}
+                  placeholder="Select start time"
+                  title="Start time of the charging session"
                 />
               </div>
             </div>
@@ -260,6 +264,8 @@ export default function SessionFormModal({
                   }
                   className="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   min={formData.startTime}
+                  title="End time of the charging session"
+                  placeholder="Select end time"
                 />
               </div>
             </div>
@@ -278,6 +284,7 @@ export default function SessionFormModal({
               }
               className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all"
               placeholder="Auto-calculated"
+              title="Duration in minutes, auto-calculated from start and end times"
             />
           </div>
 
@@ -334,6 +341,7 @@ export default function SessionFormModal({
               onChange={(e) =>
                 setFormData({ ...formData, status: e.target.value })
               }
+              aria-label="Session status"
               className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all appearance-none cursor-pointer"
             >
               <option value="CHARGING">Charging</option>
@@ -365,6 +373,7 @@ export default function SessionFormModal({
               type="submit"
               disabled={loading}
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Submit form"
             >
               {loading ? (
                 <>

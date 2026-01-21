@@ -34,11 +34,10 @@ const NavLink: React.FC<NavLinkProps> = ({
   <Link
     href={href}
     onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-      isActive
+    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive
         ? "bg-emerald-500/20 text-emerald-400 font-medium"
         : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
-    }`}
+      }`}
   >
     <Icon className="w-5 h-5" />
     <span>{label}</span>
@@ -77,7 +76,7 @@ export default function LayoutWrapper({
   return (
     <div className="flex min-h-screen">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex w-72 bg-slate-900/50 backdrop-blur-xl border-r border-slate-800/50 flex-col">
+      <aside className="hidden lg:flex w-72 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900/50 backdrop-blur-xl border-r border-slate-800/50 flex-col">
         {/* Logo */}
         <div className="p-6 border-b border-slate-800/50">
           <Link href="/" className="flex items-center gap-3 group">
@@ -153,9 +152,8 @@ export default function LayoutWrapper({
 
       {/* Mobile Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-72 bg-slate-900 border-r border-slate-800 flex flex-col z-50 transform transition-transform duration-300 lg:hidden ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed top-0 left-0 h-full w-72 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900/50 border-r border-slate-800 flex flex-col z-50 transform transition-transform duration-300 lg:hidden ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         {/* Logo */}
         <div className="p-6 border-b border-slate-800 flex items-center justify-between">
@@ -175,6 +173,8 @@ export default function LayoutWrapper({
           <button
             onClick={() => setIsSidebarOpen(false)}
             className="p-2 text-slate-400 hover:text-white lg:hidden"
+            title="Close sidebar"
+            aria-label="Close sidebar"
           >
             <X className="w-6 h-6" />
           </button>
@@ -232,12 +232,14 @@ export default function LayoutWrapper({
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/50">
+        <header className="sticky top-0 z-30 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900/50 backdrop-blur-xl border-b border-slate-800/50">
           <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsSidebarOpen(true)}
               className="p-2 text-slate-400 hover:text-white lg:hidden"
+              title="Open sidebar"
+              aria-label="Open sidebar"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -257,11 +259,10 @@ export default function LayoutWrapper({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`text-m font-medium transition-colors ${
-                    isActive(item.href)
+                  className={`text-m font-medium transition-colors ${isActive(item.href)
                       ? "text-emerald-400"
                       : "text-slate-400 hover:text-white"
-                  }`}
+                    }`}
                 >
                   {item.label}
                 </Link>

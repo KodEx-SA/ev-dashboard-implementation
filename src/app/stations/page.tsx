@@ -288,6 +288,7 @@ export default function StationsPage() {
         <div className="relative">
           <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
           <select
+            aria-label="Filter by station status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full sm:w-48 pl-12 pr-4 py-3 bg-slate-900/50 border border-slate-800/50 rounded-xl text-white focus:outline-none focus:border-emerald-500/50 transition-colors appearance-none cursor-pointer"
@@ -384,6 +385,7 @@ export default function StationsPage() {
                       setIsDeleteModalOpen(true);
                     }}
                     className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                    title="Delete station"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

@@ -332,6 +332,7 @@ export default function SessionsPage() {
         <div className="relative">
           <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
           <select
+            aria-label="Filter sessions by status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full sm:w-48 pl-12 pr-4 py-3 bg-slate-900/50 border border-slate-800/50 rounded-xl text-white focus:outline-none focus:border-emerald-500/50 transition-colors appearance-none cursor-pointer"
@@ -456,6 +457,8 @@ export default function SessionsPage() {
                     {isAdmin ? (
                       <div className="flex items-center gap-2">
                         <button
+                          type="button"
+                          aria-label="Edit session"
                           onClick={() => {
                             setSelectedSession(session);
                             setIsEditModalOpen(true);
@@ -465,6 +468,8 @@ export default function SessionsPage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
+                          type="button"
+                          aria-label="Delete session"
                           onClick={() => {
                             setSelectedSession(session);
                             setIsDeleteModalOpen(true);
@@ -555,6 +560,8 @@ export default function SessionsPage() {
             {isAdmin ? (
               <div className="flex gap-2 pt-4 border-t border-slate-800/50">
                 <button
+                  type="button"
+                  aria-label="Edit session"
                   onClick={() => {
                     setSelectedSession(session);
                     setIsEditModalOpen(true);
@@ -565,6 +572,8 @@ export default function SessionsPage() {
                   <span>Edit</span>
                 </button>
                 <button
+                  type="button"
+                  aria-label="Delete session"
                   onClick={() => {
                     setSelectedSession(session);
                     setIsDeleteModalOpen(true);
@@ -576,7 +585,12 @@ export default function SessionsPage() {
               </div>
             ) : (
               <div className="flex gap-2 pt-4 border-t border-slate-800/50">
-                <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-800/50 text-slate-400 rounded-lg cursor-not-allowed">
+                <button
+                  type="button"
+                  disabled
+                  aria-label="View only access"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-800/50 text-slate-400 rounded-lg cursor-not-allowed"
+                >
                   <Eye className="w-4 h-4" />
                   <span>View Only</span>
                 </button>
