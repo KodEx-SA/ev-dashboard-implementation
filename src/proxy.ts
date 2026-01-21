@@ -5,7 +5,7 @@ export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Debug logging
-  console.log("🔒 Middleware triggered for:", pathname);
+  console.log("🔒 Proxy triggered for:", pathname);
   console.log(
     "📝 All cookies:",
     req.cookies.getAll().map((c) => c.name)
